@@ -59,6 +59,8 @@ class DATASET(Dataset):
         mask = cv2.imread(self.masks_path[index], cv2.IMREAD_GRAYSCALE)
         background = mask.copy()
         background = 255 - background
+        # Fix BGR/RGB mismatch: align OpenCV's BGR output with RGB expectation before normalization.
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         """ Applying Data Augmentation """
         if self.transform is not None:

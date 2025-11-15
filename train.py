@@ -112,13 +112,19 @@ if __name__ == "__main__":
     model = ConDSeg()
 
     if pretrained_backbone:
-
-        saved_weights = torch.load(pretrained_backbone)
-
-        for name, param in model.named_parameters():
-            if name.startswith('layer0') or name.startswith('layer1') or name.startswith('layer2') or name.startswith(
-                    'layer3'):
-                param.data = saved_weights[name]
+        saved_weights = torch.load(pretrained_backbone, map_location='cpu')
+        if isinstance(saved_weights, dict) and "state_dict" in saved_weights:
+            saved_weights = saved_weights["state_dict"]
+        model_state = model.state_dict()
+        loaded = 0
+        backbone_prefixes = ('layer0', 'layer1', 'layer2', 'layer3')
+        for name in model_state.keys():
+            if name.startswith(backbone_prefixes) and name in saved_weights:
+                model_state[name] = saved_weights[name]
+                loaded += 1
+        # Fix missing BN stats: load full backbone state so BN buffers move with the pretrained weights.
+        model.load_state_dict(model_state, strict=False)
+        print(f"Loaded {loaded} backbone tensors from {pretrained_backbone}")
 
     if resume_path:
         checkpoint = torch.load(resume_path, map_location='cpu')
