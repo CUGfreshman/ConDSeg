@@ -29,7 +29,7 @@ def my_seeding(seed):
 if __name__ == "__main__":
 
     # dataset
-    dataset_name = 'Kvasir-SEG'
+    dataset_name = 'Glas'
     val_name = None
 
     seed = 0
@@ -112,19 +112,15 @@ if __name__ == "__main__":
     model = ConDSeg()
 
     if pretrained_backbone:
-        saved_weights = torch.load(pretrained_backbone, map_location='cpu')
-        if isinstance(saved_weights, dict) and "state_dict" in saved_weights:
-            saved_weights = saved_weights["state_dict"]
+        saved_state = torch.load(pretrained_backbone, map_location='cpu')
         model_state = model.state_dict()
-        loaded = 0
         backbone_prefixes = ('layer0', 'layer1', 'layer2', 'layer3')
-        for name in model_state.keys():
-            if name.startswith(backbone_prefixes) and name in saved_weights:
-                model_state[name] = saved_weights[name]
-                loaded += 1
-        # Fix missing BN stats: load full backbone state so BN buffers move with the pretrained weights.
+        filtered_state = {
+            k: v for k, v in saved_state.items()
+            if k in model_state and k.startswith(backbone_prefixes)
+        }
+        model_state.update(filtered_state)
         model.load_state_dict(model_state, strict=False)
-        print(f"Loaded {loaded} backbone tensors from {pretrained_backbone}")
 
     if resume_path:
         checkpoint = torch.load(resume_path, map_location='cpu')
